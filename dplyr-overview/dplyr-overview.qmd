@@ -1,0 +1,310 @@
+---
+title: "dplyr Overview"
+author: "Sara Stoudt"
+format: html
+
+execute: 
+  warning: false
+  message: false
+---
+
+This overview was adapted from Labs 5 and 6 in Lindsay Poirier's [Data Ethnographies Lab Book](https://github.com/lindsaypoirier/Data-Ethnographies-Lab-Book).
+
+Read through these examples carefully. There are 10 tasks for you to complete as you work your way through (marked **TO DO**). 
+
+## Getting Started
+
+### Load the relevant libraries
+
+```{r}
+library(tidyverse)
+library(lubridate)
+```
+
+### Import and clean example dataset
+
+This data is originally from the US Department of Health Services and describes hospitals across the country.
+
+
+```{r}
+hospitals <- read.csv("Hospitals.csv", stringsAsFactors = FALSE)
+
+hospitals$ZIP <- as.character(hospitals$ZIP)
+
+## use the help pane to figure out what this is doing
+## **TO DO**: add a code annotation here
+hospitals$ZIP <- str_pad(hospitals$ZIP, 5, pad = "0") 
+
+## translating missing data codes to NAs
+is.na(hospitals) <- hospitals == "NOT AVAILABLE"
+is.na(hospitals) <- hospitals == -999
+
+## use the help pane to figure out what this is doing
+## **TO DO**: add a code annotation here
+hospitals$SOURCEDATE <- ymd_hms(hospitals$SOURCEDATE)
+hospitals$VAL_DATE <- ymd_hms(hospitals$VAL_DATE)
+```
+
+
+## Annotation 
+
+Following each code chunk you will see examples of four annotations: 1) query, 2) summarize), 3) interpret, and 4) reflect. You will get a chance to practice writing these towards the end of this activity.
+
+1. QUERY: a question that the code is designed to answer.
+
+This is an opportunity to reflect on whether you understand what the code is actually doing. If you are struggling to come up with a question, it is most likely because you are not fully certain what the code is doing. If this is the case, you may need to study the functions a bit more. 
+
+2. SUMMARIZE: summarize one thing learned from the data based on the output of the code
+
+What do the results tell you empirically? Here you will want to be specific making sure your summary considers the scope of the data - its geographic, temporal, and topical bounds. 
+
+3. INTERPRET: interpret the data, considering why the result matters in a broader sense.
+
+If you were to convey the results to a decision-maker, how would you convey to them the significance of the result? What should the numbers make us think? What questions do they bring up?
+
+4. REFLECT: reflection on some of the limitations to answering the questions posed with the data at hand
+
+Knowing what you know about how the data was collected and aggregated, what uncertainties remain in regards to addressing this question? In what ways is the analysis limited by the scope of the data's definitions or categories?
+
+
+## Zooming in to Explore Filtered Data
+
+Often in data exploration, we do not just want to examine the dataset as a whole, but to also examine how values, calculations, and plots change when we zoom in to one specific set of observations in the dataset. 
+
+### Filtering to a Category
+
+Filtering is one way we can zoom in on our data - exploring only those observations that meet a particular criteria.
+
+For example, one criteria for being designated as a Critical Access Hospital is that the hospital must have 25 or fewer inpatient beds. We may want to see how the values for BEDS change when we filter to (or zoom into) just those observations representing critical access hospitals. Notice how we can combine any number of dplyr verbs using the pipe (%>%). Below I will filter to rows that meet a criteria and then select a variable to examine from the filtered data.
+
+```{r}
+hospitals %>% filter(TYPE == "CRITICAL ACCESS") %>% select(NAME, BEDS) %>% head()
+hospitals %>% filter(TYPE == "CRITICAL ACCESS") %>% select(BEDS) %>% summary()
+```
+
+1. QUERY: This analysis might help us answer the question: Do all critical access hospitals in the US have 25 beds or fewer, and what is average number of beds at a critical access hospital?
+
+2. SUMMARIZE: We can see that there are some hospitals in the US that have been designated as critical access hospitals that have more than 25 beds, that at least one critical access hospital has as many as 286 beds, that all critical access hospitals have at least three beds, and that the average number of beds hovers around 25. 
+
+3. INTERPRET: Since critical access hospitals are legally supposed to have 25 beds or fewer, we may want to look into which critical access hospitals have more than 25 beds. This may indicate that these hospitals are not meeting the requirements to receive federal funding or that there is an issue with the data being recorded. 
+
+
+```{r}
+hospitals %>% filter(TYPE == "CRITICAL ACCESS" & BEDS > 25) %>% select(NAME, TYPE, STATE, BEDS, STATUS) %>% head()
+```
+
+4. REFLECT: There are 180 critical access hospitals in the dataset with more than 25 beds. This brings up question of how the HIFLD team determined 1) that the hospital was a critical access hospital and 2) the number of beds.  If the hospital was part of a complex with multiple facilities and just one of those facilities was critical access, was the hospital classed as critical access? If so, how were beds then calculated? What was the source of the bed count - the hospital's website? State or other government documents? Were these sources reliable?
+
+### Filtering to Numeric Observations Above or Below a Threshold
+
+We may also want to explore if there are certain hospital ownership models that tend to have more beds. To do so, we would filter the data to those observations where BEDS is greater than a certain threshold - let's say 1200. The first time I do this below, I select() the NAME of the hospital and the OWNER. This shows every hospital with more than 1200 beds, along with its OWNER type. However, what if I only wanted to know which owner types had hospitals with more than 1000 beds? I wouldn't necessarily want to select() OWNER in this case because this would show me the owner for every observation in my filtered data. As you can see below, this means that GOVERNMENT-STATE would appear 13 times! Instead, I would want to check the distinct() OWNER in the filtered data. Check out how I do this below. 
+
+```{r}
+#Lists name and owner of hospitals with more than 1000 beds.
+hospitals %>% filter(BEDS > 1000) %>% select(NAME, OWNER)  %>% head()
+
+#Lists owner for every hospital with more than 1000 beds in the dataset
+hospitals %>% filter(BEDS > 1000) %>% select(OWNER)  %>% head()
+
+#Lists the owners with more than 1000 beds
+hospitals %>% filter(BEDS > 1000) %>% distinct(OWNER)  %>% head()
+```
+
+
+1. QUERY: Which ownership models have at least one hospital with more than 1000 beds?
+
+2. SUMMARIZE: We can see that 3 ownership models have hospitals with more than 1000 beds, including state government hospitals, district government hospitals, and non-profit hospitals.
+
+3. INTERPRET: This indicates that the largest hospitals in the country tend to be district and state government hospitals and non-profit hospitals, whereas, according to this data, there are no private hospitals, federal, or local hospitals with more than 1000 beds. As the US federal government considers how to distribute federal aid to hospitals, this is one (very tiny) step towards understanding the various relationships between hospital business models and patient capacity. Consider some of the [consequences](https://www.modernhealthcare.com/finance/why-some-smaller-hospitals-treating-lots-covid-patients-arent-getting-high-impact-federal) of these decisions.
+
+4. REFLECT: What counts as a bed in the hospitals dataset? Do ambulatory beds count? Are beds calculated based on the number of actual cots in the hospital, or the number of spaces available for beds? Does a bed count assume that there are enough staff and resources to support that many patients in those beds?
+
+### Zooming out - aka grouping common values and summarizing
+
+At times, we are seeking to get a broader picture of what's going on in our dataset than provided - grouping observations that share a common value and then performing a calculation to summarize something within each of those groups. In other words, sometimes we want to see our data in aggregate. For instance, I may want to know the total number of hospital beds per state. To calculate this, I would need to group all of the hospital observations by state and then sum the total number of beds in each group. 
+In such cases, we can call **group_by()** to aggregate the observations with common variable values into groups. Then we will call **summarize()** to perform a calculation within each of those groups. **summarize()** takes a set of values and a calculation method and returns a single value. For instance, if we call summarize() with a numeric column in our dataset and "mean" as a calculation method, it will return the average of all the numeric values in that column. When called in conjunction with group_by(), **summarize()** takes a set of values for each group and a calculation method and returns a single value for each group. 
+
+For the hospitals dataset, we will group the observations by STATE and then use summarize to calculate the sum of BEDS per state. Notice below how we are choosing to ignore NA values above by calling na.rm = TRUE. When we do so, we need to keep in mind that we are not summarizing across all observations in the dataset, but only those for which there is a value listed in the variable we are operating on. Because of this, I also calculate the number of observations in each group, the number of observations where the BEDS variable is missing, and the percentage of observations in the group where the variable is missing. This provides important context for how readily we can rely on these numbers. For instance, when you run the code below, note how in Alaska, the number of beds are missing for 28% of the observations. 
+
+```{r}
+hospitals %>% 
+  group_by(STATE) %>% #Group observations by state
+  summarize(
+    STATES_BEDS = sum(BEDS, na.rm = TRUE), #Calculate the sum of BEDS within each STATE group
+    OBSERVATIONS = n(), #Calculate how many observations are in each STATE group
+    MISSING_BEDS = sum(is.na(BEDS)), #Calculate how many NAs are in the BEDS variable in each STATE group
+    PERCENT_MISSING = sum(is.na(BEDS))/n()*100) %>% #Divide the two values you just calculated to determine the percent of missing data
+  ungroup()
+```
+
+> Notice that I close each of these calls with **ungroup()**. When we group_by() a variable, any subsequent function calls will continue to be performed on the grouped data, unless we ungroup() it. This can be important if we want to filter to specific values after we summarize() the data. Assuming that we don't want to perform a filter operation within each group but on the entire new dataframe created after summarizing, we need to ungroup() the data before performing the filter() operation. 
+
+From this function, we see the number of beds across all hospitals per state. Depending on the question we are asking, this may or may not be relevant. For instance, if I'm wondering how much hospital infrastructure was available to support Covid-19 patients, one (of a number of factors) I need to consider before presenting this data is which types of hospitals accepted Covid-19 patients. Would rehabilitation hospitals accept patients? Psychiatric hospitals? Military hospitals? If they weren't in 2019, will they at some point? Further, some states talked about cordoning off hotels for Covid-19 patients. How do we account for this change in the number of hospital beds (something definitely not represented in our data based on the way hospital has been defined). We need to do external research to answer these questions. Then we may wish to filter our data to relevant hospital types. For instance, at this moment, we may filter our data to only include beds at General Acute Care Hospitals. We also know that some hospitals in the dataset are closed. We need to also filter these out before presenting the data. Notice how below, I can do this by simply copying and pasting the code from above and adding one filter statement before grouping the data. 
+
+```{r}
+hospitals %>%
+  filter(TYPE == "GENERAL ACUTE CARE" & STATUS == "OPEN") %>%
+  group_by(STATE) %>% # Group observations by state
+  summarize(
+    STATES_BEDS = sum(BEDS, na.rm = TRUE), # Calculate the sum of BEDS within each STATE group
+    OBSERVATIONS = n(), # Calculate how many observations are in each STATE group
+    MISSING_BEDS = sum(is.na(BEDS)), # Calculate how many NAs are in the BEDS variable in each STATE group
+    PERCENT_MISSING = sum(is.na(BEDS)) / n() * 100
+  ) %>% # Divide the two values you just calculated to determine the percent of missing data
+  ungroup()
+```
+
+1. QUERY: a question that the code is designed to answer.
+
+Out of the hospitals that are of type general acute care and and has a current status of open, what state do they come from, and out of those states how many beds, observations, and missing beds are there (including percent missing)"
+
+2. SUMMARIZE: summarize one thing learned from the data based on the output of the code
+
+The number of beds in each state, and the percent of hospitals in each state which are missing beds.
+
+3. INTERPRET: interpret the data, considering why the result matters in a broader sense.
+
+We can use this information to make informed decisions about which hospitals might be in need of more beds or a bigger staff. We are also able to see if the number of observations in one state is significantly greater than any others. If this is the case then we can make informed decisions about representation from each state in our data set.
+
+4. REFLECT: reflection on some of the limitations to answering the questions posed with the data at hand
+
+There are numerous factors which play into making an informed decision about which resources needed to go into which hospital. Size of the hospital should be a factor because a hospital with more employees or covers a bigger area will probably have more beds. There are also a number of other factors like the amount of people who are usually admitted into the hospital
+
+Often times to answer questions within a dataset, we need to both zoom in and out on data - honing in on certain observations and then generalizing across them. We cannot answer questions well if we don't have a good understanding of what's included in our data and how issues are defined. Had we not known that hospitals that are closed and hospitals that are classed as rehabs or psychiatric facilities were included in the data, we may have made some poor assumptions about the number of beds available. Also note how, in every step of data analysis, we have to make decisions about what to include and what to exclude in the analysis. Data analysts play a very active role in shaping the knowledge that gets produced from data. The numbers can never speak for themselves. 
+
+## Measures of Central Tendency
+
+A measure of central tendency is a single numeric quantity describing data by identifying a central position within it. It summarizes values within a set into a single value. We often refer to such a value as an average. 
+
+At times, finding this measure can be quite useful. However, we also need to be careful when relying on measures of central tendency to communicate information about our data. This is because measures of central tendency can be *reductionist* - reducing a complex story told across data to a single value. They can hide meaningful outliers and erase the nuance of a complicated narrative. For instance, measures of central tendency related to wealth in the US are likely to hide the experiences of the most impoverished communities. 
+
+Further, there are many pitfalls we need to steer clear of when assessing a measure of central tendency. Such a measure should only be taken to summarize the values across *similar observations.* Let's say that we were looking to calculate the average number of beds in hospitals across the US. To do so, would it be appropriate to identify a central position within the BEDS variable in the dataset? Probably not. There are many different types of hospitals in the hospitals dataset, and we would expect these different hospitals to have different numbers of beds. For instance, we *know* from our research that Critical Access Hospitals are supposed to have 25 beds or fewer. In averaging across all of them, we would be measuring the center value of dissimilar observations. Before taking an average of BEDS, we would want to filter our data to a set of similar observations. We will do this below - filtering to open general acute care hospitals.
+
+### Mean
+
+A common measure of central tendency is a *mean* - the sum of a series of values divided by the number of values summed. This measure considers every value in a set of data and thus is a model of the entire set of data. Remember from lab five that we calculate mean with **summarize()**  Let's calculate the mean number of beds at open general acute care hospitals.
+
+```{r}
+hospitals %>% 
+  filter(STATUS == "OPEN" & TYPE == "GENERAL ACUTE CARE") %>%
+  summarize(mean_value = mean(BEDS, na.rm = TRUE))
+```
+
+### Median
+
+Another measure of central tendency considers the middle value in a dataset; this is referred to as the *median*. Now let's calculate the median number of beds at open general acute care hospitals.
+
+```{r}
+hospitals %>% 
+  filter(STATUS == "OPEN" & TYPE == "GENERAL ACUTE CARE") %>%
+  summarize(median_value = median(BEDS, na.rm = TRUE))
+```
+
+Notice how there's a considerable difference between the mean and the median value. So which should we rely on to summarize the central location in our dataset? 
+
+We want to keep in mind that because the mean is a model of the entire dataset, it is easily influenced by outliers in the dataset, as well as a skewed distribution. When the distribution of values in a set is symmetric, the mean and median of the dataset will be the same. In other words, the distribution will be balanced on either side of the median.
+
+**TO DO**: Make a plot (using ggplot2) to determine whether you should use the mean or median in this situation. Make sure the plot has informative axis labels. Write an informative caption for the graph that explains what the graph is of, and what the main take-away is (including whether you will use mean or median moving forward)
+
+```{r}
+open_gac_hospitals = hospitals %>%
+  filter(STATUS == "OPEN" & TYPE == "GENERAL ACUTE CARE") 
+
+ggplot(open_gac_hospitals, aes(x = BEDS)) + 
+  geom_histogram(binwidth = 50) +
+  labs(x = "Number of Beds", title = "Distribution of the Number of Beds Among Open General Acute Care Hospitals ")
+```
+
+The distribution of beds is heavily left skewed, meaning that the median is going to be a better measure of center than the mean. 
+
+## Measures of Variation
+
+Measures of variation help us to understand how spread out the values in our dataset are - their variations from each other and from the data's center. Like measures of central tendency, measures of variation should be taken across a set of data with similar values. This often means filtering our data to those that represent a similar set of observations.
+
+### Ranges
+
+The range of data refers to the difference between the maximum value in a set and the minimum value in a set. We can also use summarize() to find the max value, min value, and range of values in a numeric variable. 
+
+```{r}
+hospitals %>% 
+  filter(STATUS == "OPEN" & TYPE == "GENERAL ACUTE CARE") %>%
+  summarize(max_value = max(BEDS, na.rm = TRUE))
+
+hospitals %>% 
+  filter(STATUS == "OPEN" & TYPE == "GENERAL ACUTE CARE") %>%
+  summarize(min_value = min(BEDS, na.rm = TRUE))
+
+hospitals %>% 
+  filter(STATUS == "OPEN" & TYPE == "GENERAL ACUTE CARE") %>%
+  summarize(range = max(BEDS, na.rm = TRUE) - min(BEDS, na.rm = TRUE))
+```
+
+### Quartile Deviation
+
+Let's use a boxplot to check out the quartile deviation of beds in open general acute care hospitals in the US.
+
+```{r fig.height=5, fig.width=5}
+hospitals %>%
+  filter(STATUS == "OPEN" & TYPE == "GENERAL ACUTE CARE") %>%
+  ggplot(aes(y = BEDS)) +
+  geom_boxplot() +
+  labs(title = "Distribution of Beds across General Acute Care Hospitals in the US that are Open", y = "Beds") +
+  theme_bw()
+```
+
+**TO DO**: Write an informative caption for this graph that explains what the graph is of, and what the main take-away is (including some mention of variation)
+
+The number of beds across hospitals defined as General Acute Care and are currently open is heavily left skewed with a median at around 50 and numerous of outliers around the 700 to 1500 range. 
+
+### Standard Deviation
+
+*Standard deviation* calculates the extent of concentration of values around the mean. A higher standard deviation indicates that values are more dispersed from the mean, and a lower standard deviation indicates that values are more concentrated around the mean.  
+
+```{r}
+hospitals %>% 
+  filter(STATUS == "OPEN" & TYPE == "GENERAL ACUTE CARE") %>%
+  summarize(sd_value = sd(BEDS, na.rm = TRUE))
+```
+
+## Grouped Quantitative Insights 
+
+Some of the most interesting information we can gain from our data is how values change depending on where in the data we are looking. 
+
+### Boxplots
+
+Let's take a look at how we could compare dispersions in the number of hospital beds available by hospital ownership. 
+
+```{r fig.height=5, fig.width=10}
+hospitals %>%
+  filter(STATUS == "OPEN") %>%
+  ggplot(aes(x = TYPE, y = BEDS)) +
+  geom_boxplot() +
+  labs(title = "Distribution of Beds across Hospitals in the US that are Open by Type", x = "Type", Y = "Beds") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, hjust=1)) + #Changes x-axis tick labels 90 degrees
+  coord_flip() #Flips the x and y axis to make the data easier to read and compare
+
+```
+
+**TO DO**: Write an informative caption for this graph that explains what the graph is of, and what the main take-away is.
+
+This graph shows the distribution of beds across all of the different types of hospitals that are open. Main take-away is that all of the medians tend to be similar, with Chronic disease hospitals having the most beds on average.
+
+We can also filter our data to similar values and the compare variation across another category. 
+
+```{r fig.height=5, fig.width=10}
+hospitals %>%
+  filter(STATUS == "OPEN" & TYPE == "GENERAL ACUTE CARE") %>%
+  ggplot(aes(x = OWNER, y = BEDS)) +
+  geom_boxplot() +
+  labs(title = "Distribution of Beds across Hospitals in the US that are Open by Type", x = "OWNER", Y = "Beds") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, hjust=1)) + #Changes x-axis tick labels 90 degrees
+  coord_flip() #Flips the x and y axis to make the data easier to read and compare
+```
+
+**TO DO**: Write an informative caption for this graph that explains what the graph is of, and what the main take-away is.
+
+This graph shows the distribution of beds among all hospitals label General Acute Care and that are open by owner. One of the major takeaway is that government hospitals at the state level have a wide range of beds.  
+
+

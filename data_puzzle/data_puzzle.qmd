@@ -1,0 +1,35 @@
+---
+title: "data_puzzle"
+format: html
+---
+
+# Imports (1)
+
+```{r}
+library(tidyverse)
+
+data = read.csv("data.csv")
+```
+
+# How much did our stores make during Black Friday?
+
+```{r}
+black_friday_data = data %>%
+  filter(grepl("11-27", trxn_ts))
+
+# find state tax rates
+tax_state_id_df = data.frame(
+  state_id = c("AZ", "CA", "FL", "IL", "IN", "MI", "OL", "TX"),
+  tax_rate = c(.0840, .0868,  .0708, .0882, .0700, .0600, .0895, .0819)
+)
+
+# join with black friday dara by state
+black_friday_data = black_friday_data %>%
+  left_join(tax_state_id_df, by = "state_id")
+
+round(sum(black_friday_data$amount - (black_friday_data$amount * black_friday_data$discount) - (black_friday_data$amount * black_friday_data$tax_rate)), digits = 2)
+```
+
+On Black Friday, this company made 728,887 dollars.
+
+change

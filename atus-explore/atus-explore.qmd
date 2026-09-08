@@ -1,0 +1,206 @@
+---
+title: "atus-explore"
+author: "Sara Stoudt"
+format: html
+
+execute: 
+  warning: false
+  message: false
+---
+
+This has been adapted from an [IPUMS training](https://assets.ipums.org/_files/exercises/ipums-atus-exercise-r-2.pdf).
+
+## Getting Started
+
+### Load the relevant libraries
+
+```{r}
+library(ipumsr)
+library(tidyverse)
+library(ggbeeswarm)
+```
+
+### Load the data
+
+```{r}
+ddi <- read_ipums_ddi("atus_00004.xml")
+data <- read_ipums_micro(ddi)
+```
+
+## Getting to Know Your Data
+
+Variables we might be interested in exploring are:
+
+- ACT_PURCH: This variable indicates the minutes per day each respondent reported spending in activities such as purchases and rentals of consumer goods, regardless of mode or place of purchase or rental (in person, via telephone, over the internet, at home, or in a store).
+
+- FAMINCOME: Yearly family income
+
+- foodprep: Created variable for time spent preparing food
+
+- childcare: Created variable for time with childcare as a secondary activity 
+
+- REGION
+
+- AGE
+
+- SEX
+
+- YEAR
+
+**Question 1**: What years do we have data from in this dataset?
+
+```{r}
+table(data$YEAR)
+```
+We have 13133 rows from 2009 and 12479 rows with 2011 in the year category. We only have data from 2009 and 2011
+
+**Question 2**: Create a variable that distinguishes individuals who reported any consumer purchases on the day of their interview. (Hint: If they didn't spend any time purchasing anything, they didn't make any consumer purchases.)
+
+```{r}
+data = data %>%
+  mutate(report_purch = ifelse(ACT_PURCH == 0, FALSE, TRUE))
+```
+
+
+**Question 3**: What proportion of the sample made at least one purchase? Does this proportion differ by sex?
+
+Percent which Recorded One Purchase:
+
+```{r}
+nrow(data %>% filter(report_purch == TRUE)) / nrow(data) * 100
+```
+41.21% of our sample made at least one purchase.
+
+Is the Proportion Different for Males and Females?
+
+```{r}
+data %>%
+  group_by(SEX) %>%
+  summarize(mean = mean(report_purch == TRUE, na.rm = TRUE))
+```
+
+
+**Question 4**: For people who made at least one purchase, what is the average amount of time spent on purchases each year?
+
+```{r}
+data %>%
+  filter(report_purch == TRUE) %>%
+  group_by(YEAR) %>%
+  summarize(Mean = mean(data$ACT_PURCH, na.rm = TRUE))
+```
+
+## Weights
+
+The ATUS sample design requires use of weights to provide and accurate representation at the national level. Half of the interview days in the sample are weekdays, while the other half are weekends.  The weight WT06 adjusts for the disproportional number of weekend days, and *should be used to weight time use variables*.  More specifically, WT06 gives the number of person-days in the calendar quarter represented by each survey response. 
+
+For example, to find the average time spent on purchases per year, we use a weighted mean and specify the weights.
+
+```{r}
+data %>%  group_by(YEAR) %>% summarize(ACT_PURCH = weighted.mean(ACT_PURCH, WT06)) 
+```
+
+
+**Question 5**: What is the average time spent in food preparation across income groups?  
+
+```{r}
+data %>%
+  group_by(FAMINCOME) %>%
+  summarize(Mean_foodprep = weighted.mean(foodprep, WT06))
+```
+
+**Question 6**: Does the pattern in average time spent in food preparation across income groups change when you separate the analysis by year?
+
+```{r}
+data %>%
+  group_by(FAMINCOME, YEAR) %>%
+  summarize(Mean_foodprep = weighted.mean(foodprep, WT06))
+```
+
+**Question 7**: Ask and answer your own question that requires a group_by/summarize move that has not been investigated yet.
+
+Is the average time spent by child care differ for males and females?
+
+```{r}
+data %>%
+  group_by(SEX) %>%
+  summarize(mean_childcare = weighted.mean(childcare, WT06))
+```
+
+
+## Another Time Use Data Slice ##
+
+```{r}
+ddi <- read_ipums_ddi("atus_00005.xml")
+data <- read_ipums_micro(ddi)
+
+before_covid <- data %>% filter(YEAR < 2020)
+after_covid <- data %>% filter(YEAR > 2021)
+
+data = data %>% 
+  mutate(before_covid = ifelse(YEAR < 2020, TRUE, FALSE))
+```
+
+Variables we might be interested in exploring are:
+
+- ACT_FOOD: This variable indicates the minutes per day each respondent reported spending in activities such as eating and drinking not done as work or a volunteer activity, whether the respondent was alone, with others, at home, at a place of purchase, in transit, or somewhere else.
+
+- EMPSTAT: employment status
+
+- MARST: marital status
+
+- DAY: day of the week they were surveyed about
+
+- EDUC: highest level of education obtained
+
+- RACE
+
+- AGE
+
+- SEX
+
+- REGION
+
+**You should use WT06 as your weights when summarizing time use variables.**
+
+**Question 8**: What was the average time spent eating and drinking per year? Do you see any difference before/after COVID? This will require making plot(s).
+
+```{r}
+#  average time spent eating and drinking per year by before or after COVID
+summary_data = data %>%
+  group_by(before_covid, YEAR) %>%
+  summarize(mean_ACT_FOOD = weighted.mean(ACT_FOOD, WT06))
+
+ggplot(summary_data, aes(x = YEAR, y = mean_ACT_FOOD, fill = before_covid)) + 
+  geom_bar(stat = "summary") +
+  coord_cartesian(ylim = c(60, 70)) + 
+  labs(x = "Year", 
+       y = "Average Amount of Time Spent Eating or Drinkingr", 
+       title = "Average Amount of Time Spent Eating and Drinking Per Year by Year",
+       fill = "Before Covid?")
+```
+
+
+**Question 9**: Find a sub-group that has an "interesting" pattern in average time spent eating and drinking over time. This will require making plot(s). Explain why you think what you found is interesting and what the difference in patterns mean for the sub-group in comparison to overall in terms of time use. Note: Be prepared to put some plots/summaries on one slide and present (informally) to the class for less than 5 minutes about your findings.
+
+### Difference in average time spent eating and drink by Region
+
+```{r}
+summarized_eatdrink_df = data %>%
+  mutate(SEX = ifelse(SEX == 1, "MALE", "FEMALE")) %>%
+  group_by(REGION, SEX) %>%
+  summarize(mean_ACT_FOOD = weighted.mean(ACT_FOOD)) 
+
+ggplot(summarized_eatdrink_df, aes(x = SEX, y = mean_ACT_FOOD, fill = SEX)) + 
+  geom_violin(alpha = 0.5, color = NA) + 
+  geom_boxplot(width = 0.2, alpha = 0.2) +
+  labs(title = "Distributtion of Average Time Eating and/or Drinking by Gender", 
+       y = "Average Time Eating and/or Drinking",
+       x = "Gender") +
+  scale_fill_manual(values = c("purple", "orange"))
+
+ggsave("Distribution_AVG_EatDrink.png")
+```
+
+
+
+
