@@ -1,0 +1,154 @@
+---
+title: "Karen Training"
+format: html
+
+execute: 
+  warning: false
+  message: false
+---
+
+## Setup 
+
+Start an R Project for this activity. Put this file in the folder for the project.
+
+```{r}
+library(tidyverse)
+```
+
+## Data
+
+```{r}
+england_wales_names <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/main/data/2026/2026-06-16/england_wales_names.csv')
+ni_names <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/main/data/2026/2026-06-16/ni_names.csv')
+scotland_names <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/main/data/2026/2026-06-16/scotland_names.csv')
+```
+
+```{r}
+head(england_wales_names)
+```
+
+Note that the US Karen analysis normalizes the counts of each name/sex/year by the number of male/female babies per year. We will want to do the same here.
+
+Here is some pseudocode to get you started.
+
+- get number of babies per sex/year
+- join that information with the original dataset
+- make a new variable called `prop` that is the proportion of female/male babies in that year (rather than count)
+
+## Normalize by number of female/male babies per year
+
+```{r}
+
+```
+
+## Look at Karen across countries
+
+To make a line per country, we need to put the three datasets together and have a column that specifies which country the data is from.
+
+```{r}
+england_wales_names$country = rep("England/Wales", nrow(england_wales_names))
+
+## take same approach for Scotland
+
+## take same approach for Northern Island
+
+## uncomment when you are ready
+#all <- cbind.data.frame(england_wales_names, scotland_names, ni_names)
+```
+
+Now make a line plot over time per country of only the name Karen (female) using `ggplot`. Make sure to make informative axis labels and title. Does the pattern look like the Karen pattern in [the article](https://pudding.cool/2020/06/karen/)?
+
+```{r}
+
+```
+
+## Add US data
+
+It will be easier if we can just directly compare the datasets.
+
+```{r}
+#install.packages(babynames) ## run once if you don't have this package installed
+library(babynames)
+
+head(babynames)
+
+## add a country column
+
+## make dataframes match columns
+
+## uncomment the all line when ready
+#all <- all %>% select(Year, Sex, Name, Number, prop)
+names(babynames) = tolower(names(babynames))
+
+head(all)
+head(babynames)
+
+names(babynames)[4] = "number"
+
+## use cbind.data.frame to combine all and babynames
+```
+
+Now make a line plot over time per country of only the name Karen (female) again using `ggplot`. Make sure to make informative axis labels and title. Does the pattern look like the Karen pattern in the US?
+
+```{r}
+
+```
+
+## Updating the US data
+
+You'll notice the babynames dataset is not up to date. Download Resource 2 from the data source [here](https://catalog.data.gov/dataset/baby-names-from-social-security-card-applications-national-data). Put the folder in the directory for this project. Unzip it to find the data for 2018-2024. Look at the data's format outside of RStudio.
+
+Delete all the files except those for 2018-2024. As you walk through the next two chunks of code, annotate each line with a comment explaining what it is doing and why.
+
+```{r}
+files_to_read <- list.files("names/")
+
+files_to_read_path <- paste("names/",files_to_read, sep = "")
+
+years <- 2018:2024
+
+new_data <- lapply(files_to_read_path, read.table, header = F, sep = ",")
+head(new_data[[1]])
+
+for(i in 1:length(new_data)){
+  names(new_data[[i]]) <- c("name", "sex", "number")
+  new_data[[i]]$year = rep(years[i], nrow(new_data[[i]]))
+  new_data[[i]] <- new_data[[i]] %>% select(year, sex, name, number)
+}
+
+new_data <- do.call("rbind", new_data)
+```
+
+## Add calculated columns
+
+```{r}
+## add prop column
+
+## add country column
+
+## cbind.data.frame current all and this new data
+```
+
+
+## Remake plot
+
+Again make a line plot over time per country of only the name Karen (female) using `ggplot`. Make sure to make informative axis labels and title. Does the pattern look like the Karen pattern in the US?
+
+```{r}
+
+```
+
+
+## Save your nice data
+
+You will need this nice dataset for the next stage of this activity, so go ahead and save it, so you can directly read it in.
+
+```{r}
+## replace full_data with whatever you have called the dataset with
+## 4 countries worth of data that is most up to date and has the correct
+## columns
+
+## uncomment when ready
+#write.csv(full_data, "full-names-data-nice.csv", row.names = F)
+```
+
