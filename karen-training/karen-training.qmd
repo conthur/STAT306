@@ -38,7 +38,11 @@ Here is some pseudocode to get you started.
 ## Normalize by number of female/male babies per year
 
 ```{r}
-
+ni_names <- ni_names %>% 
+  group_by(Sex, Year) %>% 
+  summarise(full_count = sum(Number, na.rm = TRUE), .groups = "drop") %>% 
+  left_join(ni_names, by = c("Year", "Sex")) %>% 
+  mutate(prop = Number / full_count)
 ```
 
 ## Look at Karen across countries
@@ -49,17 +53,26 @@ To make a line per country, we need to put the three datasets together and have 
 england_wales_names$country = rep("England/Wales", nrow(england_wales_names))
 
 ## take same approach for Scotland
+scotland_names$country = rep("scotland", nrow(scotland_names))
 
 ## take same approach for Northern Island
+ni_names$country = rep("ni", nrow(ni_names))
 
 ## uncomment when you are ready
-#all <- cbind.data.frame(england_wales_names, scotland_names, ni_names)
+all <- bind_rows(england_wales_names, scotland_names, ni_names)
 ```
 
 Now make a line plot over time per country of only the name Karen (female) using `ggplot`. Make sure to make informative axis labels and title. Does the pattern look like the Karen pattern in [the article](https://pudding.cool/2020/06/karen/)?
 
 ```{r}
+only_karens = all %>%
+  filter(Name == "Karen")
 
+ggplot(only_karens, aes(x = Year, y = Number, fill = country, color = country)) + 
+  geom_line(linewidth = 1) +
+  labs(x = "Number of Babies Born",
+       y = "Year",
+       title = "Number of Babies Born named 'Karen' by Year")
 ```
 
 ## Add US data
@@ -70,27 +83,34 @@ It will be easier if we can just directly compare the datasets.
 #install.packages(babynames) ## run once if you don't have this package installed
 library(babynames)
 
-head(babynames)
+data("babynames")
 
 ## add a country column
-
-## make dataframes match columns
+babynames$country = "United States"
 
 ## uncomment the all line when ready
-#all <- all %>% select(Year, Sex, Name, Number, prop)
+all <- all %>% select(Year, Sex, Name, Number, prop, country)
+babynames = babynames %>%  rename(number = n) %>% select(year, sex, name, number, prop, country)
 names(babynames) = tolower(names(babynames))
+names(all) = tolower(names(all))
 
-head(all)
-head(babynames)
-
-names(babynames)[4] = "number"
-
-## use cbind.data.frame to combine all and babynames
+all <- bind_rows(all, babynames)
 ```
 
 Now make a line plot over time per country of only the name Karen (female) again using `ggplot`. Make sure to make informative axis labels and title. Does the pattern look like the Karen pattern in the US?
 
 ```{r}
+
+
+ggplot(all[all$name == "Karen" & all$country == "England/Wales", ], aes(x = year, y = number)) + geom_line()
+
+ggplot(all[all$name == "Karen" & all$country == "scotland", ], aes(x = year, y = number)) + geom_line()
+
+ggplot(all[all$name == "Karen" & all$country == "ni", ], aes(x = year, y = number)) + geom_line()
+
+ggplot(all[all$name == "Karen" & all$country == "United States", ], aes(x = year, y = number)) + geom_line()
+
+ggplot(all[all$name == "Karen", ], aes(x = year, y = number, fill = country, color = country)) + geom_line()
 
 ```
 
