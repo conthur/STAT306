@@ -60,6 +60,7 @@ ni_names$country = rep("ni", nrow(ni_names))
 
 ## uncomment when you are ready
 all <- bind_rows(england_wales_names, scotland_names, ni_names)
+
 ```
 
 Now make a line plot over time per country of only the name Karen (female) using `ggplot`. Make sure to make informative axis labels and title. Does the pattern look like the Karen pattern in [the article](https://pudding.cool/2020/06/karen/)?
@@ -95,6 +96,9 @@ names(babynames) = tolower(names(babynames))
 names(all) = tolower(names(all))
 
 all <- bind_rows(all, babynames)
+
+all$sex = ifelse(all$sex == "F", "Girl", all$sex)
+all$sex = ifelse(all$sex == "M", "Boy", all$sex)
 ```
 
 Now make a line plot over time per country of only the name Karen (female) again using `ggplot`. Make sure to make informative axis labels and title. Does the pattern look like the Karen pattern in the US?
@@ -102,15 +106,15 @@ Now make a line plot over time per country of only the name Karen (female) again
 ```{r}
 
 
-ggplot(all[all$name == "Karen" & all$country == "England/Wales", ], aes(x = year, y = number)) + geom_line()
+ggplot(all[all$name == "Karen" & all$country == "England/Wales" & all$sex == "Girl", ], aes(x = year, y = number)) + geom_line()
 
-ggplot(all[all$name == "Karen" & all$country == "scotland", ], aes(x = year, y = number)) + geom_line()
+ggplot(all[all$name == "Karen" & all$country == "scotland" & all$sex == "Girl", ], aes(x = year, y = number)) + geom_line()
 
-ggplot(all[all$name == "Karen" & all$country == "ni", ], aes(x = year, y = number)) + geom_line()
+ggplot(all[all$name == "Karen" & all$country == "ni" & all$sex == "Girl", ], aes(x = year, y = number)) + geom_line()
 
-ggplot(all[all$name == "Karen" & all$country == "United States", ], aes(x = year, y = number)) + geom_line()
+ggplot(all[all$name == "Karen" & all$country == "United States" & all$sex == "Girl", ], aes(x = year, y = number)) + geom_line()
 
-ggplot(all[all$name == "Karen", ], aes(x = year, y = number, fill = country, color = country)) + geom_line()
+ggplot(all[all$name == "Karen" & all$sex == "Girl", ], aes(x = year, y = number, fill = country, color = country)) + geom_line()
 
 ```
 
@@ -121,33 +125,51 @@ You'll notice the babynames dataset is not up to date. Download Resource 2 from 
 Delete all the files except those for 2018-2024. As you walk through the next two chunks of code, annotate each line with a comment explaining what it is doing and why.
 
 ```{r}
+# gets name of files in names
 files_to_read <- list.files("names/")
 
+# get the path of the fildes
 files_to_read_path <- paste("names/",files_to_read, sep = "")
 
+# defines vector of years from 2018 to 2024
 years <- 2018:2024
 
+# reads every file from names and combines them into new_data
 new_data <- lapply(files_to_read_path, read.table, header = F, sep = ",")
 head(new_data[[1]])
 
+# takes new data and adds labels, years, and adds this onto the new_data
 for(i in 1:length(new_data)){
   names(new_data[[i]]) <- c("name", "sex", "number")
   new_data[[i]]$year = rep(years[i], nrow(new_data[[i]]))
   new_data[[i]] <- new_data[[i]] %>% select(year, sex, name, number)
 }
 
+# calls the rbind function on the data, puts it all into one data frame
 new_data <- do.call("rbind", new_data)
-
 ```
 
 ## Add calculated columns
 
 ```{r}
+
 ## add prop column
+new_data = new_data %>%
+  group_by(year) %>%
+  summarise(total_number_year = sum(number)) %>%
+  right_join(new_data, by = "year") %>%
+  mutate(prop = number / total_number_year) %>%
+  select(-total_number_year)
 
 ## add country column
+new_data = new_data %>%
+  mutate(country = "United States")
+
+new_data$sex = ifelse(new_data$sex == "F",  "Girl", new_data$sex)
+new_data$sex = ifelse(new_data$sex == "M",  "Boy", new_data$sex)
 
 ## cbind.data.frame current all and this new data
+all_and_new = rbind(all, new_data)
 ```
 
 
@@ -156,7 +178,14 @@ new_data <- do.call("rbind", new_data)
 Again make a line plot over time per country of only the name Karen (female) using `ggplot`. Make sure to make informative axis labels and title. Does the pattern look like the Karen pattern in the US?
 
 ```{r}
+only_karens_all_new = all_and_new %>%
+  filter(name == "Karen" & sex == "Girl")
 
+ggplot(only_karens_all_new, aes(x = year, y = number, fill = country, color = country)) + 
+  geom_line(linewidth = 1) +
+  labs(x = "Year",
+       y = "Number of Babies Born",
+       title = "Number of Babies Born named 'Karen' by Year")
 ```
 
 
@@ -169,7 +198,9 @@ You will need this nice dataset for the next stage of this activity, so go ahead
 ## 4 countries worth of data that is most up to date and has the correct
 ## columns
 
+full_data = all_and_new
+
 ## uncomment when ready
-#write.csv(full_data, "full-names-data-nice.csv", row.names = F)
+write.csv(full_data, "full-names-data-nice.csv", row.names = F)
 ```
 
