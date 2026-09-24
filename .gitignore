@@ -28,8 +28,6 @@ vignettes/*.pdf
 # OAuth2 token, see https://github.com/hadley/httr/releases/tag/v0.3
 .httr-oauth
 
-_MACOSX
-
 # knitr and R markdown default cache directories
 *_cache/
 /cache/
@@ -53,4 +51,6 @@ rsconnect/
 .DS_Store
 .quarto
 
-.csv
+*.csv
+
+*_MACOSX
