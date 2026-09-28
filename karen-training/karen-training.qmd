@@ -73,7 +73,7 @@ ggplot(only_karens, aes(x = Year, y = Number, fill = country, color = country)) 
   geom_line(linewidth = 1) +
   labs(x = "Number of Babies Born",
        y = "Year",
-       title = "Number of Babies Born named 'Karen' by Year")
+       title = "Number of Babies Born named 'Karen' by Year") + theme_minimal()
 ```
 
 ## Add US data
@@ -199,6 +199,12 @@ You will need this nice dataset for the next stage of this activity, so go ahead
 ## columns
 
 full_data = all_and_new
+
+full_data <- full_data %>% 
+  group_by(sex, year) %>% 
+  mutate(full_count = sum(number, na.rm = TRUE)) %>% 
+  mutate(prop = number / full_count) %>%
+  select(-full_count)
 
 ## uncomment when ready
 write.csv(full_data, "full-names-data-nice.csv", row.names = F)
