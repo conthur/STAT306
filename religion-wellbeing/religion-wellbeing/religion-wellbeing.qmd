@@ -36,29 +36,104 @@ religiosity$is_religious = ifelse(religiosity$rel_3 != 1, 0, 1)
 table(religiosity$is_religious)
 ```
 
-#### Adding all the religious scores up to 9
+#### Adding all the religious scores up to 9 and getting the mean
 
 ```{r}
 religiosity = religiosity %>% 
-  mutate(rel_score = rowSums(across(rel_1:rel_9)))
+  mutate(rel_score = rowSums(across(rel_1:rel_9)), 
+         rel_score_mean = rel_score / 9)
 ```
 
 #### Adding up 
 
 ```{r}
 religiosity = religiosity %>%
-  mutate(wb_score = rowSums(across(wb_gen_1:wb_soc_3)))
+  mutate(wb_score = rowSums(across(wb_gen_1:wb_soc_3)), 
+         wb_score_mean = wb_score / 18) 
+
+# normalize from 1 to 5 to 0 to 1
+religiosity = religiosity %>%
+  mutate(wb_score_mean_norm = (wb_score_mean - 1) / 4)
 ```
 
+#### Graphs
 
+```{r}
+religiosity$rel_3 <- case_when(
+  religiosity$rel_3 == 0   ~ "Atheist",
+  religiosity$rel_3 == 0.5 ~ "Agnostic",
+  religiosity$rel_3 == 1   ~ "Religious"
+)
+
+ggplot(religiosity, aes(x = rel_score_mean, y = wb_score_mean_norm, color = rel_3)) + 
+  geom_jitter() + 
+  labs(title = "Mean Overall Religious Score by Mean Overall Well Being", 
+       x = "Mean Religious Score", 
+       y = "Mean Well Being Score", 
+       color = "Religious Self Identification")
+```
+
+```{r}
+cor(religiosity$rel_score_mean, religiosity$wb_overall_mean, use = "complete.obs")
+cor(religiosity$rel_score_mean, religiosity$wb_phys_mean, use = "complete.obs")
+cor(religiosity$rel_score_mean, religiosity$wb_psych_mean, use = "complete.obs")
+```
+
+There seems to be very little correlation between the mean religious score and the mean well being score. There is a slightly higher correlation between the mean overall psychological score, but overall it is not anywhere near enough to claim that there is a correlation. 
 ## Research Question 2
 
 **Does the relation between religiosity and self-reported well-being depend on perceived cultural norms of religion?**
 
-### EDA
+#### 
 
 ```{r}
+religiosity = religiosity %>%
+  mutate(c_norm_score = rowSums(across(cnorm_1:cnorm_2)), 
+         c_norm_mean = c_norm_score / 2)
 
+religiosity_long = religiosity %>% 
+  pivot_longer(cols = c(rel_score_mean, c_norm_mean, wb_score_mean_norm), 
+               names_to = "score_type", 
+               values_to = "score")
+
+ggplot(religiosity_long, aes(x = score, fill = score_type)) + 
+  geom_density(alpha = 0.4) +
+  scale_fill_manual(
+    values = c(
+      "c_norm_mean" = "skyblue",
+      "rel_score_mean" = "#069494", 
+      "wb_score_mean_norm" = "navy"
+    )
+  ) + labs(
+    title = "Density Curve of Scores by Score Type", 
+    x = "Normalized Score (from 0 to 1)"
+  )
+```
+
+This plot does not show very much overlap in trends for all three of the scores.
+
+```{r}
+ggplot(religiosity, aes(x = rel_score_mean, y = wb_overall_mean, color = c_norm_mean)) + 
+  geom_jitter() + 
+  labs(title = "Mean Overall Religious Score by Mean Overall Well Being", 
+       x = "Mean Religious Score", 
+       y = "Mean Well Being Score", 
+       color = "Religious Self Identification")
+```
+
+```{r}
+cor(religiosity$rel_score_mean, religiosity$c_norm_mean, use = "complete.obs")
+cor(religiosity$wb_score_mean_norm, religiosity$c_norm_mean, use = "complete.obs")
+```
+
+There seems to be a somewhat strong correlation between the mean religious score and the mean normal score. This would suggest that there is a correlation between the two, but when it comes to the relationship between religiosity and well being, it does not seem that there is much of a effect that cultural normal scores have. 
+
+#### Mean of Means Score:
+
+```{r}
+mean(religiosity$rel_score_mean)
+mean(religiosity$wb_score_mean_norm, na.rm = TRUE)
+mean(religiosity$c_norm_mean)
 ```
 
 
