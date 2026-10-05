@@ -1,0 +1,65 @@
+---
+title: "Religion and Well-Being"
+format: html
+
+execute: 
+  warning: false
+  message: false
+---
+
+## Setup
+
+Start an R Project for this activity within your private GitHub repo for this class. Put this file and the data file in the folder for the project. 
+
+```{r}
+## load any packages you need
+library(tidyverse)
+```
+
+Read the data documentation, questionnaire, and project description files to better understand the data and the goals of this activity.
+
+```{r}
+religiosity <- read.csv("MARP_data.csv", stringsAsFactors = FALSE)
+```
+
+For each of the following two research questions, make a visual and statistical argument to support your answer.
+
+## Research Question 1
+
+**Do religious people self-report higher well-being?**
+
+#### Identifying who is religious and who is not religious
+
+```{r}
+religiosity$is_religious = ifelse(religiosity$rel_3 != 1, 0, 1)
+
+table(religiosity$is_religious)
+```
+
+#### Adding all the religious scores up to 9
+
+```{r}
+religiosity = religiosity %>% 
+  mutate(rel_score = rowSums(across(rel_1:rel_9)))
+```
+
+#### Adding up 
+
+```{r}
+religiosity = religiosity %>%
+  mutate(wb_score = rowSums(across(wb_gen_1:wb_soc_3)))
+```
+
+
+## Research Question 2
+
+**Does the relation between religiosity and self-reported well-being depend on perceived cultural norms of religion?**
+
+### EDA
+
+```{r}
+
+```
+
+
+
