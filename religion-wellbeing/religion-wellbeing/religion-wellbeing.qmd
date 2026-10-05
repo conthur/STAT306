@@ -71,15 +71,32 @@ ggplot(religiosity, aes(x = rel_score_mean, y = wb_score_mean_norm, color = rel_
        x = "Mean Religious Score", 
        y = "Mean Well Being Score", 
        color = "Religious Self Identification")
+
+ggsave("Mean Overall Religious SCore by Mean Overall Well Being.png")
 ```
 
 ```{r}
 cor(religiosity$rel_score_mean, religiosity$wb_overall_mean, use = "complete.obs")
-cor(religiosity$rel_score_mean, religiosity$wb_phys_mean, use = "complete.obs")
-cor(religiosity$rel_score_mean, religiosity$wb_psych_mean, use = "complete.obs")
 ```
 
-There seems to be very little correlation between the mean religious score and the mean well being score. There is a slightly higher correlation between the mean overall psychological score, but overall it is not anywhere near enough to claim that there is a correlation. 
+There seems to be very little correlation between the mean religious score and the mean well being score. There is a slightly higher correlation between the mean overall psychological score, but overall it is not anywhere near enough to claim that there is a correlation.
+
+### Model: Multi-Linear Regression
+
+```{r}
+q1_mulit_linear_reg = lm(wb_score ~ rel_1 + 
+                           rel_3 + 
+                           rel_4, data = religiosity)
+
+summary(q1_mulit_linear_reg)
+```
+#### Model Fit
+
+```{r}
+par(mfrow = c(2, 2))
+plot(q1_mulit_linear_reg)
+```
+
 ## Research Question 2
 
 **Does the relation between religiosity and self-reported well-being depend on perceived cultural norms of religion?**
@@ -108,6 +125,8 @@ ggplot(religiosity_long, aes(x = score, fill = score_type)) +
     title = "Density Curve of Scores by Score Type", 
     x = "Normalized Score (from 0 to 1)"
   )
+
+ggsave("Density Curve of SCores by Score Type.png")
 ```
 
 This plot does not show very much overlap in trends for all three of the scores.
@@ -118,7 +137,9 @@ ggplot(religiosity, aes(x = rel_score_mean, y = wb_overall_mean, color = c_norm_
   labs(title = "Mean Overall Religious Score by Mean Overall Well Being", 
        x = "Mean Religious Score", 
        y = "Mean Well Being Score", 
-       color = "Religious Self Identification")
+       color = "Percieved Cultural Normality Score")
+
+ggsave("Mean Overall Religious Score by Mean Overall Well Being.png")
 ```
 
 ```{r}
@@ -136,5 +157,21 @@ mean(religiosity$wb_score_mean_norm, na.rm = TRUE)
 mean(religiosity$c_norm_mean)
 ```
 
+### Model: Multi-Linear Regression
 
+```{r}
+q2_mulit_linear_reg = lm(wb_score ~ rel_1 + 
+                           rel_2 + 
+                           rel_3 +
+                           rel_4 +
+                           cnorm_2, data = religiosity)
 
+summary(q2_mulit_linear_reg)
+```
+
+#### Model Fit
+
+```{r}
+par(mfrow = c(2, 2))
+plot(q2_mulit_linear_reg)
+```
